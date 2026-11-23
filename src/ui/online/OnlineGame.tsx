@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Table } from '../Table';
 import { Online, useOnline } from './useOnline';
 import { useMenuItems } from '../menu';
+import { SEAT_HUES } from '../theme';
+import type { CSSProperties } from 'react';
 
 export function OnlineGame({
   name,
@@ -168,7 +170,7 @@ function Lobby({ online }: { online: Online }) {
         </div>
         <ul className="seats">
           {room.seats.map((s, i) => (
-            <li key={i} className={s.kind}>
+            <li key={i} className={s.kind} style={{ '--hue': SEAT_HUES[i] } as CSSProperties}>
               <span className="avatar">{s.kind === 'empty' ? '·' : s.name[0]}</span>
               <span className="seat-label">
                 {s.kind === 'empty' ? 'Waiting for player…' : s.name}

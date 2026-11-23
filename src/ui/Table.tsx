@@ -1,4 +1,4 @@
-import { ReactNode, RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { ReactNode, RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Action,
   Card,
@@ -14,6 +14,8 @@ import { CardBack, CardView } from './CardView';
 import { describeCombo, ordinal } from './describe';
 import { Pile, PileLayer } from './Pile';
 import { useMenu, useMenuItems } from './menu';
+import { IconBulb, IconX } from './icons';
+import { SEAT_HUES as HUES } from './theme';
 
 export interface SeatStatus {
   offline?: boolean;
@@ -259,7 +261,7 @@ export function Table(props: TableProps) {
   const others = view.players.filter((p) => p.id !== me);
 
   return (
-    <main className="table-wrap">
+    <main className="table-wrap" style={{ '--me-hue': HUES[me] } as React.CSSProperties}>
       {props.banner}
       {!props.hideScores && (
         <div className="scorebar">
@@ -280,7 +282,11 @@ export function Table(props: TableProps) {
           const place = view.finishOrder.indexOf(p.id);
           const offline = seatStatus?.(p.id).offline;
           return (
-            <section key={p.id} className={`seat seat-${pos} ${actor === p.id ? 'active' : ''} ${offline ? 'offline' : ''}`}>
+            <section
+              key={p.id}
+              className={`seat seat-${pos} ${actor === p.id ? 'active' : ''} ${offline ? 'offline' : ''} ${place >= 0 ? 'out' : ''}`}
+              style={{ '--hue': HUES[p.id] } as React.CSSProperties}
+            >
               <div className="avatar">
                 {p.name[0]}
                 {seatStatus && <span className={'dot ' + (p.isBot ? 'bot' : offline ? 'off' : 'on')} />}
@@ -343,7 +349,11 @@ export function Table(props: TableProps) {
         </section>
 
         <section className={`me ${myTurn ? 'active' : ''}`}>
-          <div className={'status' + (feedback ? ' error' : '')} role="status" aria-live="polite">
+          <div
+            className={'status' + (feedback ? (feedback === hint && !error ? ' hint' : ' error') : '')}
+            role="status"
+            aria-live="polite"
+          >
             {feedback ?? status}
             {showTimer && <span className={'badge timer' + (secondsLeft! <= 10 ? ' urgent' : '')}>{secondsLeft}s</span>}
             {passed.has(me) && playing && !myTurn && myPlace < 0 && <span className="badge">You passed</span>}
@@ -379,11 +389,19 @@ export function Table(props: TableProps) {
                 >
                   Pass
                 </button>
-                <button type="button" disabled={!(playing && myTurn)} onClick={doHint}>
-                  {props.onHint ? 'Show me' : 'Hint'}
+                <button type="button" className="icon-btn" disabled={!(playing && myTurn)} onClick={doHint}>
+                  <IconBulb />
+                  <span>{props.onHint ? 'Show me' : 'Hint'}</span>
                 </button>
-                <button type="button" className="ghost clear-btn" disabled={!selected.length} onClick={() => setSelected([])}>
-                  Clear
+                <button
+                  type="button"
+                  className="icon-btn ghost clear-btn"
+                  disabled={!selected.length}
+                  onClick={() => setSelected([])}
+                  aria-label="Clear selection"
+                >
+                  <IconX />
+                  <span>Clear</span>
                 </button>
               </>
             )}

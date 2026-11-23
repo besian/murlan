@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Rules } from './Rules';
+import { CardView } from './CardView';
+import { IconArrow, IconBot, IconCap, IconGlobe, IconPlay } from './icons';
+import { cards } from '../tutorial/lessons';
 import { Table } from './Table';
 import { Speed, hasSavedLocalGame, useLocalGame } from './useGame';
 import { OnlineGame } from './online/OnlineGame';
@@ -119,28 +122,45 @@ function Menu(props: {
 }) {
   const canResume = hasSavedLocalGame();
   return (
-    <div className="start">
-      <div className="start-card">
-        <h2>Murlan</h2>
-        <p>Get rid of all your cards first. Beat the table with a higher combination of the same kind — or drop a bomb.</p>
-        <label>
-          Your name
+    <div className="start home">
+      <div className="home-inner">
+        <header className="hero">
+          <div className="hero-fan" aria-hidden>
+            <CardView card={HERO_CARDS[0]} />
+            <CardView card={HERO_CARDS[1]} />
+            <CardView card={HERO_CARDS[2]} />
+          </div>
+          <h1 className="logo">Murlan</h1>
+          <p className="tagline">The Albanian card game. Shed your hand first.</p>
+        </header>
+        <label className="field">
+          <span>Your name</span>
           <input value={props.name} maxLength={16} placeholder="You" onChange={(e) => props.setName(e.target.value)} />
         </label>
-        {canResume && (
-          <button type="button" className="primary big" onClick={() => props.onLocal(true)}>
-            Continue game vs bots
+        <div className="tiles">
+          {canResume && (
+            <button type="button" className="tile featured" onClick={() => props.onLocal(true)}>
+              <span className="tile-icon"><IconPlay /></span>
+              <span className="tile-text"><b>Continue game vs bots</b><small>Pick up where you left off</small></span>
+              <IconArrow />
+            </button>
+          )}
+          <button type="button" className={'tile' + (canResume ? '' : ' featured')} onClick={() => props.onLocal(false)}>
+            <span className="tile-icon"><IconBot /></span>
+            <span className="tile-text"><b>{canResume ? 'New game vs bots' : 'Play vs 3 bots'}</b><small>Offline, at your own pace</small></span>
+            <IconArrow />
           </button>
-        )}
-        <button type="button" className={canResume ? 'big' : 'primary big'} onClick={() => props.onLocal(false)}>
-          {canResume ? 'New game vs bots' : 'Play vs 3 bots'}
-        </button>
-        <button type="button" className="big" onClick={props.onOnline}>
-          Play online with friends
-        </button>
-        <button type="button" className="big" onClick={props.onTutorial}>
-          🎓 Learn to play (tutorial)
-        </button>
+          <button type="button" className="tile" onClick={props.onOnline}>
+            <span className="tile-icon"><IconGlobe /></span>
+            <span className="tile-text"><b>Play online with friends</b><small>Share a link, bots fill empty seats</small></span>
+            <IconArrow />
+          </button>
+          <button type="button" className="tile" onClick={props.onTutorial}>
+            <span className="tile-icon"><IconCap /></span>
+            <span className="tile-text"><b>Learn to play</b><small>7 short interactive lessons</small></span>
+            <IconArrow />
+          </button>
+        </div>
         <button type="button" className="link" onClick={props.onRules}>
           Rules summary
         </button>
@@ -148,6 +168,8 @@ function Menu(props: {
     </div>
   );
 }
+
+const HERO_CARDS = cards('AS RJ 2H');
 
 function LocalGame({ speed, resume, name }: { speed: Speed; resume: boolean; name: string }) {
   const game = useLocalGame(speed, resume, name);
