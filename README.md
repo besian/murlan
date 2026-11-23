@@ -1,6 +1,6 @@
 # Murlan
 
-The Albanian shedding card game, in the browser. You can play against 3 bots, or online with friends; empty seats are filled with bots.
+The Albanian shedding card game, in the browser. You can learn it with an interactive tutorial, play against 3 bots, or play online with friends; empty seats are filled with bots.
 
 ## Run it
 
@@ -27,6 +27,21 @@ The app is a single Node service, so any host that runs Node with WebSockets wor
 
 Rooms live in memory on one server process. If the server restarts, games in progress are lost, and you can't run multiple instances behind a load balancer as-is.
 If the client is hosted separately (e.g. GitHub Pages), build it with `VITE_SERVER_URL=wss://your-server/ws`.
+
+## Tutorial
+
+**Learn to play** has 7 short guided lessons, each a hand-built scenario on the real table:
+
+1. Basics: card order, the 3♠ opener, singles, passing and winning a trick
+2. Pairs and three of a kind, and coming back in after passing
+3. Straights
+4. Bombs
+5. Jokers
+6. Going out, finishing order and scoring
+7. Card exchange between hands
+
+A coach explains each situation and asks for a specific move. Wrong moves get an explanation, and "Show me" highlights the right cards.
+Lessons are plain data in [`src/tutorial/lessons.ts`](src/tutorial/lessons.ts). A test plays every script through the real engine, so a lesson can't show a move the rules don't allow.
 
 ## Online play
 
@@ -61,5 +76,6 @@ src/engine/      pure TypeScript game logic, shared by browser and server
 src/shared/      client <-> server message types
 src/ui/          React UI: menu, table (renders a PlayerView), pile, rules
 src/ui/online/   WebSocket hook, online menu, lobby
+src/tutorial/    lesson scripts + lesson runner (coach panel)
 server/          Node server: rooms, bots, timers, reconnects, static hosting
 ```

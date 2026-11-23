@@ -4,8 +4,9 @@ import { Table } from './Table';
 import { Speed, hasSavedLocalGame, useLocalGame } from './useGame';
 import { OnlineGame } from './online/OnlineGame';
 import { hasSavedSession } from './online/useOnline';
+import { Tutorial } from '../tutorial/Tutorial';
 
-type Mode = { kind: 'menu' } | { kind: 'local'; resume: boolean } | { kind: 'online' };
+type Mode = { kind: 'menu' } | { kind: 'local'; resume: boolean } | { kind: 'online' } | { kind: 'tutorial' };
 
 function readPref(key: string, fallback: string): string {
   try {
@@ -54,7 +55,7 @@ export function App() {
           <button type="button" className="ghost" onClick={() => setShowRules(true)}>
             Rules
           </button>
-          {mode.kind === 'local' && (
+          {(mode.kind === 'local' || mode.kind === 'tutorial') && (
             <button type="button" className="ghost" onClick={() => setMode({ kind: 'menu' })}>
               Menu
             </button>
@@ -68,9 +69,11 @@ export function App() {
           setName={setName}
           onLocal={(resume) => setMode({ kind: 'local', resume })}
           onOnline={() => setMode({ kind: 'online' })}
+          onTutorial={() => setMode({ kind: 'tutorial' })}
           onRules={() => setShowRules(true)}
         />
       )}
+      {mode.kind === 'tutorial' && <Tutorial onPlay={() => setMode({ kind: 'local', resume: false })} />}
       {mode.kind === 'local' && <LocalGame speed={speed} resume={mode.resume} name={name.trim()} />}
       {mode.kind === 'online' && (
         <OnlineGame name={name} setName={setName} initialCode={roomFromUrl()} onExit={() => setMode({ kind: 'menu' })} />
@@ -86,6 +89,7 @@ function Menu(props: {
   setName: (n: string) => void;
   onLocal: (resume: boolean) => void;
   onOnline: () => void;
+  onTutorial: () => void;
   onRules: () => void;
 }) {
   const canResume = hasSavedLocalGame();
@@ -109,8 +113,11 @@ function Menu(props: {
         <button type="button" className="big" onClick={props.onOnline}>
           Play online with friends
         </button>
+        <button type="button" className="big" onClick={props.onTutorial}>
+          🎓 Learn to play (tutorial)
+        </button>
         <button type="button" className="link" onClick={props.onRules}>
-          How to play
+          Rules summary
         </button>
       </div>
     </div>

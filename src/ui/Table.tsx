@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import {
   Action,
   Card,
@@ -32,6 +32,14 @@ export interface TableProps {
   /** Epoch ms of the current deadline (turn timer or auto-deal), if any. */
   deadline?: number | null;
   hostName?: string;
+  /** Tutorial extras. */
+  locked?: boolean;
+  highlight?: string[];
+  highlightPass?: boolean;
+  onHint?: () => void;
+  banner?: ReactNode;
+  hideScores?: boolean;
+  nextHandLabel?: string;
 }
 
 const POSITIONS = ['me', 'left', 'top', 'right'] as const;
@@ -49,7 +57,7 @@ function useCountdown(deadline: number | null | undefined): number | null {
 }
 
 export function Table(props: TableProps) {
-  const { view, dispatch, error, clearError, seatStatus } = props;
+  const { view, dispatch, error, clearError, seatStatus, locked } = props;
   const me = view.me;
   const n = view.players.length;
   const handLog = view.log;
@@ -66,7 +74,7 @@ export function Table(props: TableProps) {
 
   const name = (id: number) => (id === me ? 'You' : view.players[id].name);
   const actor = view.phase === 'playing' || view.phase === 'exchange' ? view.turn : null;
-  const myTurn = actor === me;
+  const myTurn = actor === me && !locked;
   const playing = view.phase === 'playing';
   const exchanging = view.phase === 'exchange' && myTurn;
   const relSeat = (id: number) => (id - me + n) % n;
@@ -125,7 +133,8 @@ export function Table(props: TableProps) {
     setSelected([]);
   };
   const doHint = () => {
-    if (!(playing && myTurn)) return;
+    if (!(playing || exchanging) || !myTurn) return;
+    if (props.onHint) return props.onHint();
     const a = chooseBotAction(view, { noise: 0 });
     if (a.type === 'play') {
       setSelected(a.cardIds);
@@ -161,7 +170,7 @@ export function Table(props: TableProps) {
   if (view.phase === 'exchange') {
     const ex = view.exchange;
     status =
-      myTurn && ex
+      actor === me && ex
         ? `${name(ex.loser)} gave you their highest card (${cardLabel(ex.received)}). Pick a card to give back.`
         : `${name(actor!)} is choosing a card to give back…`;
   } else if (!playing) {
@@ -169,7 +178,7 @@ export function Table(props: TableProps) {
   } else if (myPlace >= 0) {
     status = `You finished ${ordinal(myPlace + 1)}! Watching the rest of the hand…`;
   } else if (!myTurn) {
-    status = `${name(actor!)} is thinking…`;
+    status = actor === me ? 'Read the tip above, then press Next.' : `${name(actor!)} is thinking…`;
   } else if (!view.table) {
     status = view.mustInclude ? 'You lead first — your play must include the 3♠.' : 'Your lead — play any combination.';
   } else if (legal.length === 0) {
@@ -202,7 +211,8 @@ export function Table(props: TableProps) {
 
   return (
     <main className="table-wrap">
-      <div className="scoreboard">
+      {props.banner}
+      <div className="scoreboard" hidden={props.hideScores}>
         <span className="target">First to {view.target}</span>
         {view.players.map((p) => (
           <span key={p.id} className="score">
@@ -228,7 +238,7 @@ export function Table(props: TableProps) {
                     <span className="badge gold">{ordinal(place + 1)}</span>
                   ) : (
                     <>
-                      {p.cardCount} cards
+                      {p.cardCount} {p.cardCount === 1 ? 'card' : 'cards'}
                       {seatStatus && p.isBot && ' · bot'}
                       {offline && ' · offline'}
                     </>
@@ -290,6 +300,7 @@ export function Table(props: TableProps) {
                 key={c.id}
                 card={c}
                 selected={selected.includes(c.id)}
+                suggested={props.highlight?.includes(c.id)}
                 onClick={myTurn && (playing || exchanging) ? () => toggle(c) : undefined}
                 dim={myTurn && playing && legal.length > 0 && !legal.some((l) => l.cards.some((x) => x.rank === c.rank))}
               />
@@ -307,14 +318,14 @@ export function Table(props: TableProps) {
                 </button>
                 <button
                   type="button"
-                  className={legal.length === 0 && myTurn && view.table ? 'primary' : ''}
+                  className={(legal.length === 0 && myTurn && view.table ? 'primary' : '') + (props.highlightPass ? ' pulse' : '')}
                   disabled={!(playing && myTurn && view.table)}
                   onClick={doPass}
                 >
                   Pass
                 </button>
                 <button type="button" disabled={!(playing && myTurn)} onClick={doHint}>
-                  Hint
+                  {props.onHint ? 'Show me' : 'Hint'}
                 </button>
                 <button type="button" className="ghost" disabled={!selected.length} onClick={() => setSelected([])}>
                   Clear
@@ -371,6 +382,7 @@ function HandResult({
   onNextHand,
   onNewGame,
   hostName,
+  nextHandLabel,
   name,
   secondsLeft,
 }: TableProps & { name: (id: number) => string; secondsLeft: number | null }) {
@@ -430,7 +442,7 @@ function HandResult({
           <p className="note">
             {loser === me
               ? `Next hand: you give your highest card to ${name(order[0])}, get one back, and lead.`
-              : `Next hand: ${name(loser)} gives their highest card to ${name(order[0])}, gets one back, and leads.`}
+              : `Next hand: ${name(loser)} gives their highest card to ${order[0] === me ? 'you' : name(order[0])}, gets one back, and leads.`}
           </p>
         )}
         {canDeal ? (
@@ -440,7 +452,8 @@ function HandResult({
             </button>
           ) : (
             <button type="button" className="primary big" onClick={onNextHand} autoFocus>
-              Deal next hand{secondsLeft !== null ? ` (${secondsLeft}s)` : ''}
+              {nextHandLabel ?? 'Deal next hand'}
+              {secondsLeft !== null ? ` (${secondsLeft}s)` : ''}
             </button>
           )
         ) : (

@@ -6,15 +6,18 @@ interface Props {
   onClick?: () => void;
   small?: boolean;
   dim?: boolean;
+  /** Glow to suggest this card (tutorial). */
+  suggested?: boolean;
 }
 
-export function CardView({ card, selected, onClick, small, dim }: Props) {
+export function CardView({ card, selected, onClick, small, dim, suggested }: Props) {
   const cls = [
     'card',
     isRed(card) ? 'red' : 'black',
     selected ? 'selected' : '',
     small ? 'small' : '',
     dim ? 'dim' : '',
+    suggested ? 'suggested' : '',
     onClick ? 'clickable' : '',
     isJoker(card) ? 'joker' : '',
   ].join(' ');
