@@ -130,6 +130,11 @@ describe('online server', () => {
   }, 30000);
 
   it('rejects out-of-turn moves and ignores forged player ids', async () => {
+    // Bots must not move during this test, or the turn could reach the "wrong" player
+    // before their message arrives and the move would become legal.
+    await server.close();
+    server = startServer({ port: 0, timing: { ...FAST, botDelay: 60_000 } });
+    port = await server.ready;
     const { a, b } = await twoPlayerRoom();
     a.send({ t: 'start' });
     await a.until(() => !!a.view && !!b.view);
