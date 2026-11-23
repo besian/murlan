@@ -71,7 +71,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Table */
 .table-wrap {
-  flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 16px 14px; gap: 8px;
+  flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 16px 14px; gap: 6px;
   max-width: 1100px; width: 100%; margin: 0 auto; position: relative;
 }
 .table-wrap > * { flex: none; }
@@ -436,4 +436,50 @@ button.pulse { box-shadow: 0 0 0 3px #ffd84d; animation: glow 1.2s ease-in-out i
   .controls button { font-size: 14px; white-space: nowrap; }
   /* Tap a card again to deselect — the Clear button doesn't earn its space here. */
   .controls .clear-btn { display: none; }
+}
+
+/* Floating menu button (replaces the top bar) */
+.menu-fab {
+  position: fixed; top: 10px; right: 10px; z-index: 20;
+  width: 42px; height: 42px; min-height: 0; padding: 0; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: #1b2a22e6; border: 1px solid #ffffff33; box-shadow: 0 4px 14px #0008;
+  backdrop-filter: blur(4px);
+}
+.menu-fab:hover:not(:disabled) { background: #26392e; }
+.menu-fab span { display: block; width: 18px; height: 2px; border-radius: 1px; background: var(--ink); }
+.menu-backdrop { z-index: 30; align-items: start !important; justify-items: end; padding: 10px; }
+.menu-modal {
+  width: min(320px, 100%); display: flex; flex-direction: column; gap: 8px; padding: 16px;
+  transform-origin: top right;
+}
+.menu-head { display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px; }
+.menu-head h2 { margin: 0; font-size: 20px; color: var(--accent); letter-spacing: 0.03em; }
+.menu-sub { font-size: 13px; color: var(--ink-soft); }
+.menu-head .close { min-height: 0; padding: 4px 10px; }
+.menu-modal .menu-item { width: 100%; margin: 0; text-align: left; padding: 10px 14px; }
+.menu-modal .menu-item.primary { text-align: center; }
+.menu-item.danger { color: var(--danger); }
+.menu-item.armed { background: var(--danger); color: #2a0000; border-color: transparent; font-weight: 600; }
+.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 2px; font-size: 14px; color: var(--ink-soft); }
+.segmented { display: flex; background: #0003; border-radius: 8px; padding: 3px; gap: 2px; }
+.segmented button { border: none; background: transparent; min-height: 0; padding: 5px 10px; font-size: 13px; }
+.segmented button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+/* Keep the top row clear of the menu button */
+.scorebar { min-height: 42px; padding: 0 56px; }
+.tutorial .coach-head, .tutorial .coach-progress { margin-right: 44px; }
+@media (min-width: 1240px) {
+  .tutorial .coach-head, .tutorial .coach-progress { margin-right: 0; }
+}
+@media (max-width: 760px) {
+  .scorebar { justify-content: flex-start; padding: 0 52px 0 4px; min-height: 40px; }
+  .scoreboard { justify-content: flex-start; }
+}
+@media (max-height: 520px) {
+  .menu-fab { width: 34px; height: 34px; top: 6px; right: 6px; gap: 3px; }
+  .menu-fab span { width: 14px; }
+  .scorebar { min-height: 32px; }
+  .menu-modal { gap: 4px; padding: 10px 14px; }
+  .menu-modal .menu-item { padding: 6px 12px; min-height: 32px; }
 }

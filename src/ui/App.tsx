@@ -5,6 +5,7 @@ import { Speed, hasSavedLocalGame, useLocalGame } from './useGame';
 import { OnlineGame } from './online/OnlineGame';
 import { hasSavedSession } from './online/useOnline';
 import { Tutorial } from '../tutorial/Tutorial';
+import { MenuButton, MenuItem, MenuModal, MenuProvider, useMenuItems, useMenuRegistry } from './menu';
 
 type Mode = { kind: 'menu' } | { kind: 'local'; resume: boolean } | { kind: 'online' } | { kind: 'tutorial' };
 
@@ -29,6 +30,8 @@ export function App() {
   const [speed, setSpeed] = useState<Speed>(() => readPref('murlan.speed', 'normal') as Speed);
   const [name, setName] = useState(() => readPref('murlan.name', ''));
   const [showRules, setShowRules] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useMenuRegistry();
   // Arriving with ?room=CODE, or with an online session to resume, goes straight online.
   const [mode, setMode] = useState<Mode>(() =>
     roomFromUrl() || hasSavedSession() ? { kind: 'online' } : { kind: 'menu' },
@@ -37,31 +40,23 @@ export function App() {
   useEffect(() => writePref('murlan.speed', speed), [speed]);
   useEffect(() => writePref('murlan.name', name), [name]);
 
+  const appItems: MenuItem[] = [
+    { id: 'rules', label: 'Rules', onSelect: () => setShowRules(true) },
+    ...(mode.kind !== 'menu'
+      ? [{ id: 'home', label: 'Main menu', onSelect: () => setMode({ kind: 'menu' }) }]
+      : []),
+  ];
+  const subtitle = {
+    menu: undefined,
+    local: 'Game vs bots',
+    online: 'Online game',
+    tutorial: 'Tutorial',
+  }[mode.kind];
+
   return (
+    <MenuProvider value={menu.ctx}>
     <div className="app">
-      <header className="topbar">
-        <h1>Murlan</h1>
-        <div className="topbar-actions">
-          {mode.kind === 'local' && (
-            <label className="speed">
-              Bot speed
-              <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)}>
-                <option value="slow">Slow</option>
-                <option value="normal">Normal</option>
-                <option value="fast">Fast</option>
-              </select>
-            </label>
-          )}
-          <button type="button" className="ghost" onClick={() => setShowRules(true)}>
-            Rules
-          </button>
-          {(mode.kind === 'local' || mode.kind === 'tutorial') && (
-            <button type="button" className="ghost" onClick={() => setMode({ kind: 'menu' })}>
-              Menu
-            </button>
-          )}
-        </div>
-      </header>
+      <MenuButton open={menuOpen} onClick={() => setMenuOpen(true)} />
 
       {mode.kind === 'menu' && (
         <Menu
@@ -79,8 +74,38 @@ export function App() {
         <OnlineGame name={name} setName={setName} initialCode={roomFromUrl()} onExit={() => setMode({ kind: 'menu' })} />
       )}
 
+      {menuOpen && (
+        <MenuModal
+          title="Murlan"
+          subtitle={subtitle}
+          items={[...menu.items, ...appItems]}
+          onClose={() => setMenuOpen(false)}
+          extra={
+            mode.kind === 'local' && (
+              <div className="menu-row">
+                <span>Bot speed</span>
+                <div className="segmented" role="radiogroup" aria-label="Bot speed">
+                  {(['slow', 'normal', 'fast'] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      role="radio"
+                      aria-checked={speed === s}
+                      className={speed === s ? 'on' : ''}
+                      onClick={() => setSpeed(s)}
+                    >
+                      {s[0].toUpperCase() + s.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          }
+        />
+      )}
       {showRules && <Rules onClose={() => setShowRules(false)} />}
     </div>
+    </MenuProvider>
   );
 }
 
@@ -126,6 +151,7 @@ function Menu(props: {
 
 function LocalGame({ speed, resume, name }: { speed: Speed; resume: boolean; name: string }) {
   const game = useLocalGame(speed, resume, name);
+  useMenuItems('game', [{ id: 'new', label: 'New game', danger: true, onSelect: game.newGame }]);
   return (
     <Table
       view={game.view}

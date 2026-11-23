@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Table } from '../Table';
 import { Online, useOnline } from './useOnline';
+import { useMenuItems } from '../menu';
 
 export function OnlineGame({
   name,
@@ -15,6 +16,12 @@ export function OnlineGame({
 }) {
   const online = useOnline(name.trim() || 'Player');
   const { room, view } = online;
+  useMenuItems(
+    'game',
+    room
+      ? [{ id: 'leave', label: room.started ? 'Leave game' : 'Leave room', danger: !!room.started, onSelect: online.leave }]
+      : null,
+  );
 
   return (
     <>

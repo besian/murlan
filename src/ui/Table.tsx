@@ -13,6 +13,7 @@ import {
 import { CardBack, CardView } from './CardView';
 import { describeCombo, ordinal } from './describe';
 import { Pile, PileLayer } from './Pile';
+import { useMenu, useMenuItems } from './menu';
 
 export interface SeatStatus {
   offline?: boolean;
@@ -105,7 +106,10 @@ export function Table(props: TableProps) {
   const handLog = view.log;
   const [selected, setSelected] = useState<string[]>([]);
   const [hint, setHint] = useState<string | null>(null);
-  const [showLog, setShowLog] = useState(false);
+  const { logOpen: showLog, setLogOpen: setShowLog } = useMenu();
+  useMenuItems('table', [{ id: 'log', label: 'Hand log', onSelect: () => setShowLog(true) }]);
+  // Close the log when this table goes away.
+  useEffect(() => () => setShowLog(false), []); // eslint-disable-line react-hooks/exhaustive-deps
   const tableRef = useRef<HTMLDivElement>(null);
   useFitCards(tableRef);
   const secondsLeft = useCountdown(props.deadline);
@@ -267,9 +271,6 @@ export function Table(props: TableProps) {
               </span>
             ))}
           </div>
-          <button type="button" className="ghost log-toggle" aria-expanded={showLog} onClick={() => setShowLog((v) => !v)}>
-            Log
-          </button>
         </div>
       )}
       {showLog && <GameLog log={handLog} name={name} onClose={() => setShowLog(false)} />}

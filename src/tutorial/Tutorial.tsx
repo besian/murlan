@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Action, GameState, IllegalMove, applyAction, viewFor } from '../engine';
 import { Table } from '../ui/Table';
 import { LESSONS, Lesson, matchesSolution, solutionCards } from './lessons';
+import { useMenuItems } from '../ui/menu';
 
 const DONE_KEY = 'murlan.tutorial.done';
 const BOT_PAUSE = 900;
@@ -26,6 +27,16 @@ function markDone(id: string) {
 export function Tutorial({ onPlay }: { onPlay: () => void }) {
   const [lessonIdx, setLessonIdx] = useState<number | null>(null);
   const [done, setDone] = useState(loadDone);
+  const [run, setRun] = useState(0);
+  useMenuItems(
+    'tutorial',
+    lessonIdx !== null
+      ? [
+          { id: 'restart', label: 'Restart lesson', onSelect: () => setRun((r) => r + 1) },
+          { id: 'lessons', label: 'All lessons', onSelect: () => setLessonIdx(null) },
+        ]
+      : null,
+  );
 
   if (lessonIdx === null) {
     const next = LESSONS.findIndex((l) => !done.includes(l.id));
@@ -60,7 +71,7 @@ export function Tutorial({ onPlay }: { onPlay: () => void }) {
   const lesson = LESSONS[lessonIdx];
   return (
     <LessonRunner
-      key={lesson.id}
+      key={`${lesson.id}-${run}`}
       lesson={lesson}
       index={lessonIdx}
       onExit={() => setLessonIdx(null)}
