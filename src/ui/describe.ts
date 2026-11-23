@@ -2,7 +2,7 @@ import { Combo, rankLabel, RANK_A, RANK_BLACK_JOKER, RANK_RED_JOKER } from '../e
 
 function plural(rank: number) {
   const l = rankLabel(rank);
-  return l === '6' ? '6s' : l + 's';
+  return l === 'A' ? 'Aces' : l + 's';
 }
 
 function straightLabel(pos: number) {

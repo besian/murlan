@@ -14,6 +14,7 @@ import { CardBack, CardView } from './CardView';
 import { describeCombo, ordinal } from './describe';
 import { Speed, currentActor, useGame } from './useGame';
 import { Rules } from './Rules';
+import { Pile, PileLayer } from './Pile';
 
 const ME = 0;
 
@@ -143,16 +144,26 @@ function Table({ state, game }: { state: GameState; game: Game }) {
     if (e.kind === 'pass') passed.add(e.player);
   }
 
-  // If the trick was just cleared, keep showing it faded until the next lead.
-  let shownPlay = view.table;
+  // Every play of the current trick, stacked as a pile. If the trick was just
+  // cleared, keep showing it (faded) until the next lead.
+  const offset = state.log.length - handLog.length;
+  let end = handLog.length;
   let trickTaken: number | null = null;
-  if (!shownPlay && handLog.length && handLog[handLog.length - 1].kind === 'trickWon') {
-    const lastPlay = [...handLog].reverse().find((e) => e.kind === 'play');
-    if (lastPlay && lastPlay.kind === 'play') {
-      shownPlay = { player: lastPlay.player, combo: lastPlay.combo };
-      trickTaken = lastPlay.player;
+  const lastEntry = handLog[handLog.length - 1];
+  if (!view.table && lastEntry?.kind === 'trickWon') {
+    trickTaken = lastEntry.player;
+    end = handLog.length - 1;
+  }
+  let start = end;
+  while (start > 0 && handLog[start - 1].kind !== 'trickWon') start--;
+  const pile: PileLayer[] = [];
+  if (view.table || trickTaken !== null) {
+    for (let i = start; i < end; i++) {
+      const e = handLog[i];
+      if (e.kind === 'play') pile.push({ key: offset + i, player: e.player, combo: e.combo });
     }
   }
+  const topPlay = pile[pile.length - 1];
 
   const legal = playing && myTurn ? legalPlays(view.hand, view.table?.combo ?? null, view.mustInclude) : [];
   const selectionCheck = selected.length && playing && myTurn ? checkPlay(state, ME, selected) : null;
@@ -280,18 +291,16 @@ function Table({ state, game }: { state: GameState; game: Game }) {
         })}
 
         <section className="center">
-          {shownPlay ? (
-            <div className={'pile' + (trickTaken !== null ? ' taken' : '')} key={state.log.length}>
-              <div className="pile-label">
+          {topPlay ? (
+            <div className={'pile' + (trickTaken !== null ? ' taken' : '')}>
+              <div className="pile-label" key={topPlay.key}>
                 {trickTaken !== null
-                  ? `${state.players[trickTaken].name} takes the trick`
-                  : `${state.players[shownPlay.player].name}: ${describeCombo(shownPlay.combo)}`}
+                  ? trickTaken === ME
+                    ? 'You take the trick'
+                    : `${state.players[trickTaken].name} takes the trick`
+                  : `${state.players[topPlay.player].name}: ${describeCombo(topPlay.combo)}`}
               </div>
-              <div className="pile-cards">
-                {shownPlay.combo.cards.map((c) => (
-                  <CardView key={c.id} card={c} dim={trickTaken !== null} />
-                ))}
-              </div>
+              <Pile layers={pile} />
             </div>
           ) : (
             <div className="pile empty">

@@ -123,12 +123,27 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .thinking i:nth-child(3) { animation-delay: 0.3s; }
 
 .center { grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 170px; }
-.pile { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: drop 0.25s ease-out; }
-.pile.taken { opacity: 0.55; }
+.pile { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.pile.taken .pile-stack { opacity: 0.5; transform: scale(0.94); }
+.pile.taken .pile-layer .card { filter: grayscale(0.3); }
+.pile-label { animation: fade-in 0.25s ease-out; }
+
+/* The trick pile: each play is a layer dropped on top of the previous ones. */
+.pile-stack {
+  position: relative; width: 100%; height: calc(var(--card-h) + 46px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.pile-layer {
+  position: absolute; left: 50%; top: 50%; display: flex;
+  transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot));
+  animation: land 0.38s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+.pile-layer .card { box-shadow: 0 1px 3px #0006; }
+.pile-layer .card + .card { margin-left: calc(var(--card-w) * -0.55); }
+.pile-layer:not(.top) .card { filter: brightness(0.86); }
+.pile-layer.top .card { box-shadow: 0 6px 14px #0008; }
 .pile.empty .pile-label { color: #ffffff55; font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; }
 .pile-label { font-weight: 600; text-align: center; text-shadow: 0 1px 2px #0006; }
-.pile-cards { display: flex; flex-wrap: wrap; justify-content: center; }
-.pile-cards .card + .card { margin-left: calc(var(--card-w) * -0.35); }
 .notes { background: #0004; border-radius: 10px; padding: 8px 14px; font-size: 14px; text-align: center; }
 
 .me { grid-area: me; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; }
@@ -190,6 +205,12 @@ button.card:hover:not(:disabled) { background: var(--card); transform: translate
 .note { color: var(--ink-soft); font-size: 13px; }
 
 @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes land {
+  from { transform: translate(-50%, -50%) translate(var(--fx), var(--fy)) rotate(0deg) scale(1.08); opacity: 0; }
+  35% { opacity: 1; }
+  to { transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 1; }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes drop { from { transform: translateY(-10px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes blink { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 
@@ -214,6 +235,7 @@ button.card:hover:not(:disabled) { background: var(--card); transform: translate
   .card .corner.br { display: none; }
   .card .pip { font-size: 22px; padding-top: 10px; }
   .card.joker .pip { font-size: 26px; }
+  .pile-layer .card + .card { margin-left: calc(var(--card-w) * -0.6); }
   .card.selected, button.card.selected:hover { transform: translateY(-12px); }
   .controls button { padding: 8px 12px; }
   .log ol { columns: 1; }
