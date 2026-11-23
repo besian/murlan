@@ -5,11 +5,12 @@ import { CardView } from './CardView';
 export interface PileLayer {
   /** Stable key (absolute log index) so layers already on the pile don't re-animate. */
   key: number;
-  player: number;
+  /** Seat relative to you: 0 = you (bottom), 1 = left, 2 = top, 3 = right. */
+  from: number;
   combo: Combo;
 }
 
-/** Where each seat sits relative to the table centre (player 0 is you, at the bottom). */
+/** Where each relative seat sits, measured from the table centre. */
 const FROM: Record<number, [number, number]> = {
   0: [0, 220],
   1: [-320, 0],
@@ -34,7 +35,7 @@ export function Pile({ layers }: { layers: PileLayer[] }) {
     <div className="pile-stack">
       {visible.map((layer, i) => {
         const top = i === visible.length - 1;
-        const [fx, fy] = FROM[layer.player] ?? [0, 0];
+        const [fx, fy] = FROM[layer.from] ?? [0, 0];
         const style = {
           '--tx': `${jitter(layer.key, 1) * 16}px`,
           '--ty': `${jitter(layer.key, 2) * 10}px`,

@@ -22,7 +22,8 @@ export type LogEntry =
   | { kind: 'pass'; player: number }
   | { kind: 'trickWon'; player: number }
   | { kind: 'out'; player: number; place: number }
-  | { kind: 'exchange'; from: number; to: number; card: Card }
+  /** `card` is null in views of players who weren't part of the exchange. */
+  | { kind: 'exchange'; from: number; to: number; card: Card | null }
   | { kind: 'jokersShown'; player: number }
   | { kind: 'handStart'; hand: number }
   | { kind: 'handEnd'; order: number[]; points: number[] }
@@ -194,9 +195,20 @@ export function canPass(state: GameState, player: number): boolean {
 
 /** Validate a proposed play without applying it; returns the combo or an error message. */
 export function checkPlay(state: GameState, player: number, cardIds: string[]): Combo | string {
+  return validatePlay(state, player, state.players[player].hand, cardIds);
+}
+
+/** The parts of the game a play is checked against — satisfied by both GameState and PlayerView. */
+export interface PlayContext {
+  phase: Phase;
+  turn: number;
+  table: TablePlay | null;
+  mustInclude: string | null;
+}
+
+export function validatePlay(state: PlayContext, player: number, hand: readonly Card[], cardIds: string[]): Combo | string {
   if (state.phase !== 'playing') return 'Not in play';
   if (state.turn !== player) return 'Not your turn';
-  const hand = state.players[player].hand;
   const cards: Card[] = [];
   for (const id of cardIds) {
     const c = hand.find((x) => x.id === id);
@@ -335,6 +347,8 @@ export interface PlayerView {
   me: number;
   hand: Card[];
   players: { id: number; name: string; isBot: boolean; cardCount: number; score: number }[];
+  /** Events of the current hand, with other players' exchanged cards hidden. */
+  log: LogEntry[];
   phase: Phase;
   turn: number;
   table: TablePlay | null;
@@ -353,6 +367,9 @@ export function viewFor(state: GameState, me: number): PlayerView {
   return {
     me,
     hand: state.players[me].hand,
+    log: currentHandLog(state.log).map((e) =>
+      e.kind === 'exchange' && e.from !== me && e.to !== me ? { ...e, card: null } : e,
+    ),
     players: state.players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -373,4 +390,11 @@ export function viewFor(state: GameState, me: number): PlayerView {
     handNumber: state.handNumber,
     lastHandOrder: state.lastHandOrder,
   };
+}
+
+/** Log entries since the start of the current hand. */
+export function currentHandLog(log: LogEntry[]): LogEntry[] {
+  let i = log.length - 1;
+  while (i >= 0 && log[i].kind !== 'handStart') i--;
+  return log.slice(Math.max(i, 0));
 }

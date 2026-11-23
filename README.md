@@ -1,15 +1,41 @@
 # Murlan
 
-The Albanian shedding card game, in the browser. Right now you play against 3 bots; the engine is built so online multiplayer can be added on top.
+The Albanian shedding card game, in the browser. You can play against 3 bots, or online with friends; empty seats are filled with bots.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # engine + 300 simulated bot games
-npm run build    # static site in dist/
+npm run dev:server   # game server on :8787 (needed for online play)
+npm run dev          # client on http://localhost:5173 (proxies /ws to the server)
+npm test             # engine tests, 300 simulated bot games, online server integration tests
 ```
+
+Bot mode runs entirely in the browser, so `npm run dev` alone is enough for it.
+
+## Production
+
+```bash
+npm run build        # client -> dist/, server -> dist-server/
+npm start            # one Node process serves the site + WebSocket on $PORT (default 8787)
+```
+
+The app is a single Node service, so any host that runs Node with WebSockets works. Examples:
+
+- **Render / Railway**: create a Node web service from this repo. Build command `npm install && npm run build`, start command `npm start`.
+- **Fly.io / any Docker host**: use the included `Dockerfile` (`fly launch`, or `docker build -t murlan . && docker run -p 8787:8787 murlan`).
+
+Rooms live in memory on one server process. If the server restarts, games in progress are lost, and you can't run multiple instances behind a load balancer as-is.
+If the client is hosted separately (e.g. GitHub Pages), build it with `VITE_SERVER_URL=wss://your-server/ws`.
+
+## Online play
+
+- **Create a room** gives you a 4-letter code and an invite link (`?room=CODE`). Friends open the link, enter a name, and join.
+- **Bots:** the host can add or remove bots in empty seats. **Start** fills any remaining seats with bots.
+- **Authority:** the server holds the game and validates every move. Each client only receives its own hand (`viewFor`), and cards exchanged between other players are hidden.
+- **Reconnecting:** a refresh or dropped connection takes you back to your seat, using a token saved in the browser.
+  While you're away, a bot plays your turns. **Leave** during a game hands your seat to a bot permanently.
+- **Timers:** 45 s per turn, after which a bot moves for you. After a hand, the host deals the next one, or it auto-deals after 30 s. Host duties pass to another player if the host leaves.
 
 ## Rules implemented
 
@@ -27,12 +53,13 @@ House rules vary, so the rule logic lives in [`src/engine/combos.ts`](src/engine
 ## Code layout
 
 ```
-src/engine/   pure TypeScript, no DOM, so it can run on a server later
-  cards.ts    deck, ranks
-  combos.ts   classify / compare combinations, enumerate legal plays
-  game.ts     game state + applyAction reducer (seeded RNG, fully replayable), viewFor(player)
-  bot.ts      heuristic bot: picks the move that leaves the cheapest hand to finish
-src/ui/       React table UI
+src/engine/      pure TypeScript game logic, shared by browser and server
+  cards.ts       deck, ranks
+  combos.ts      classify / compare combinations, enumerate legal plays
+  game.ts        GameState + applyAction reducer (seeded RNG, replayable), viewFor(player)
+  bot.ts         heuristic bot: picks the move that leaves the cheapest hand to finish
+src/shared/      client <-> server message types
+src/ui/          React UI: menu, table (renders a PlayerView), pile, rules
+src/ui/online/   WebSocket hook, online menu, lobby
+server/          Node server: rooms, bots, timers, reconnects, static hosting
 ```
-
-`applyAction(state, action)` is a pure reducer and `viewFor(state, player)` returns only what that player may see. Online play can be added by running the reducer on a server and sending each client its view.
