@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Action,
   Card,
@@ -44,6 +44,48 @@ export interface TableProps {
 
 const POSITIONS = ['me', 'left', 'top', 'right'] as const;
 
+const MAX_CARD_H = 112;
+const MIN_CARD_H = 40;
+
+/**
+ * Size the cards so the whole table fits its box without scrolling. The box is sized by
+ * the page layout (it fills whatever height is left); we binary-search the largest card
+ * height at which the table's content doesn't overflow it.
+ */
+function useFitCards(ref: RefObject<HTMLElement>) {
+  const fit = () => {
+    const el = ref.current;
+    if (!el) return;
+    const apply = (h: number) => {
+      const w = Math.round(h / 1.42);
+      el.style.setProperty('--card-h', `${h}px`);
+      el.style.setProperty('--card-w', `${w}px`);
+      el.classList.toggle('compact-cards', w < 58);
+      el.classList.toggle('tight', h < 96);
+      return el.scrollHeight <= el.clientHeight;
+    };
+    // Cards wider than ~1/6 of the table look clumsy on narrow screens.
+    let hi = Math.max(MIN_CARD_H, Math.min(MAX_CARD_H, Math.floor((el.clientWidth / 6.2) * 1.42)));
+    let lo = MIN_CARD_H;
+    if (apply(hi)) return;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (apply(mid)) lo = mid;
+      else hi = mid;
+    }
+    apply(lo);
+  };
+  // Re-fit after every render (content like status text can change height) and on resize.
+  useLayoutEffect(fit);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 /** Seconds left until `deadline`, ticking. */
 function useCountdown(deadline: number | null | undefined): number | null {
   const [now, setNow] = useState(() => Date.now());
@@ -63,6 +105,9 @@ export function Table(props: TableProps) {
   const handLog = view.log;
   const [selected, setSelected] = useState<string[]>([]);
   const [hint, setHint] = useState<string | null>(null);
+  const [showLog, setShowLog] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
+  useFitCards(tableRef);
   const secondsLeft = useCountdown(props.deadline);
   const handKey = view.hand.map((c) => c.id).join();
 
@@ -212,15 +257,23 @@ export function Table(props: TableProps) {
   return (
     <main className="table-wrap">
       {props.banner}
-      <div className="scoreboard" hidden={props.hideScores}>
-        <span className="target">First to {view.target}</span>
-        {view.players.map((p) => (
-          <span key={p.id} className="score">
-            {name(p.id)} <b>{p.score}</b>
-          </span>
-        ))}
-      </div>
-      <div className="table">
+      {!props.hideScores && (
+        <div className="scorebar">
+          <div className="scoreboard">
+            <span className="target">First to {view.target}</span>
+            {view.players.map((p) => (
+              <span key={p.id} className="score">
+                {name(p.id)} <b>{p.score}</b>
+              </span>
+            ))}
+          </div>
+          <button type="button" className="ghost log-toggle" aria-expanded={showLog} onClick={() => setShowLog((v) => !v)}>
+            Log
+          </button>
+        </div>
+      )}
+      {showLog && <GameLog log={handLog} name={name} onClose={() => setShowLog(false)} />}
+      <div className="table" ref={tableRef}>
         {others.map((p) => {
           const pos = POSITIONS[relSeat(p.id)] ?? 'top';
           const place = view.finishOrder.indexOf(p.id);
@@ -289,21 +342,22 @@ export function Table(props: TableProps) {
         </section>
 
         <section className={`me ${myTurn ? 'active' : ''}`}>
-          <div className="status" role="status">
-            {status}
+          <div className={'status' + (feedback ? ' error' : '')} role="status" aria-live="polite">
+            {feedback ?? status}
             {showTimer && <span className={'badge timer' + (secondsLeft! <= 10 ? ' urgent' : '')}>{secondsLeft}s</span>}
             {passed.has(me) && playing && !myTurn && myPlace < 0 && <span className="badge">You passed</span>}
           </div>
           <div className="hand">
             {view.hand.map((c) => (
+              <div className="slot" key={c.id}>
               <CardView
-                key={c.id}
                 card={c}
                 selected={selected.includes(c.id)}
                 suggested={props.highlight?.includes(c.id)}
                 onClick={myTurn && (playing || exchanging) ? () => toggle(c) : undefined}
                 dim={myTurn && playing && legal.length > 0 && !legal.some((l) => l.cards.some((x) => x.rank === c.rank))}
               />
+              </div>
             ))}
           </div>
           <div className="controls">
@@ -327,19 +381,14 @@ export function Table(props: TableProps) {
                 <button type="button" disabled={!(playing && myTurn)} onClick={doHint}>
                   {props.onHint ? 'Show me' : 'Hint'}
                 </button>
-                <button type="button" className="ghost" disabled={!selected.length} onClick={() => setSelected([])}>
+                <button type="button" className="ghost clear-btn" disabled={!selected.length} onClick={() => setSelected([])}>
                   Clear
                 </button>
               </>
             )}
           </div>
-          <div className="feedback" aria-live="polite">
-            {feedback}
-          </div>
         </section>
       </div>
-
-      <GameLog log={handLog} name={name} />
 
       {(view.phase === 'handOver' || view.phase === 'gameOver') && (
         <HandResult {...props} name={name} secondsLeft={secondsLeft} />
@@ -348,7 +397,7 @@ export function Table(props: TableProps) {
   );
 }
 
-function GameLog({ log, name }: { log: LogEntry[]; name: (id: number) => string }) {
+function GameLog({ log, name, onClose }: { log: LogEntry[]; name: (id: number) => string; onClose: () => void }) {
   const lines = log
     .slice(-14)
     .map((e) => {
@@ -365,14 +414,17 @@ function GameLog({ log, name }: { log: LogEntry[]; name: (id: number) => string 
     })
     .filter(Boolean);
   return (
-    <details className="log">
-      <summary>Hand log</summary>
+    <div className="log-panel" role="dialog" aria-label="Hand log">
+      <div className="log-head">
+        <b>This hand</b>
+        <button type="button" className="ghost" onClick={onClose} aria-label="Close log">
+          ✕
+        </button>
+      </div>
       <ol>
-        {lines.map((l, i) => (
-          <li key={i}>{l}</li>
-        ))}
+        {lines.length ? lines.map((l, i) => <li key={i}>{l}</li>) : <li>Nothing yet.</li>}
       </ol>
-    </details>
+    </div>
   );
 }
 
@@ -411,7 +463,8 @@ function HandResult({
             <tr>
               <th>Place</th>
               <th>Player</th>
-              <th>Points</th>
+              <th>Hand</th>
+              <th>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -420,18 +473,9 @@ function HandResult({
                 <td>{ordinal(i + 1)}</td>
                 <td>{name(id)}</td>
                 <td>+{POINTS_BY_PLACE[i] ?? 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <h3>Totals</h3>
-        <table className="results">
-          <tbody>
-            {standings.map((p) => (
-              <tr key={p.id} className={p.id === me ? 'me-row' : ''}>
-                <td>{name(p.id)}</td>
                 <td>
-                  <b>{p.score}</b>
+                  <b>{view.players[id].score}</b>
+                  {standings[0].id === id && standings[0].score > (standings[1]?.score ?? -1) ? ' 👑' : ''}
                 </td>
               </tr>
             ))}

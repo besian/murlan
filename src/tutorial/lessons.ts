@@ -109,10 +109,8 @@ export const LESSONS: Lesson[] = [
         mustInclude: '3S',
       }),
     steps: [
-      say(
-        'Welcome to Murlan! The goal is simple: be the first to get rid of all your cards. ' +
-          'Cards rank from 3 (lowest) up through 10, J, Q, K, A, then 2 — and the two jokers on top. Suits never matter.',
-      ),
+      say('Welcome to Murlan! The goal is simple: be the first to get rid of all your cards.'),
+      say('Cards rank from 3 (lowest) up through 10, J, Q, K, A, then 2 — and the two jokers on top. Suits never matter.'),
       say('In the first hand of a game, whoever holds the 3♠ starts — and must play it. That’s you!'),
       { kind: 'you', text: 'Tap the 3♠ to select it, then press Play.', solution: play(YOU, '3S'), highlight: true },
       bot(play(DRITA, '5S')),
@@ -163,10 +161,8 @@ export const LESSONS: Lesson[] = [
         turn: DRITA,
       }),
     steps: [
-      say(
-        'Besides single cards you can play a pair (two of the same rank) or three of a kind. ' +
-          'Whatever is led sets the kind and size for the whole trick.',
-      ),
+      say('Besides single cards you can play a pair (two of the same rank) or three of a kind.'),
+      say('Whatever is led sets the kind and size of combination for the whole trick.'),
       bot(play(DRITA, '3C 3D'), 'Drita leads a pair of 3s.'),
       bot(play(ARBEN, '6C 6D')),
       bot(pass(TEUTA)),
@@ -243,11 +239,9 @@ export const LESSONS: Lesson[] = [
       bot(pass(DRITA)),
       bot(pass(ARBEN)),
       bot(pass(TEUTA), 'Nobody can beat it — you win the trick.'),
-      say(
-        'More straight rules: an Ace can be high (10-J-Q-K-A) or low (A-2-3-4-5) — that’s the only place a 2 counts as low. ' +
-          'Straights can’t wrap around (Q-K-A-2-3 isn’t allowed), jokers never go in a straight, ' +
-          'and a 6-card straight can only be beaten by another 6-card straight.',
-      ),
+      say('An Ace can be high (10-J-Q-K-A) or low (A-2-3-4-5). That’s the only place a 2 counts as low.'),
+      say('Straights can’t wrap around (Q-K-A-2-3 isn’t allowed), and jokers never go in a straight.'),
+      say('Length matters: a 6-card straight can only be beaten by another 6-card straight.'),
       { kind: 'you', text: 'Lead your last card, the 8, to go out.', solution: play(YOU, '8S') },
       say('Straights are a great way to dump lots of low cards at once. Next up: bombs!'),
     ],
@@ -295,10 +289,8 @@ export const LESSONS: Lesson[] = [
         turn: TEUTA,
       }),
     steps: [
-      say(
-        'There are two jokers. The Black Joker beats every normal card, and the Red Joker beats the Black Joker — ' +
-          'it’s the highest single card in the game.',
-      ),
+      say('There are two jokers. The Black Joker beats every normal card.'),
+      say('The Red Joker beats the Black Joker — it’s the highest single card in the game.'),
       bot(play(TEUTA, 'AS'), 'Teuta leads an Ace.'),
       { kind: 'you', text: 'Beat the Ace with your 2.', solution: play(YOU, '2D'), highlight: true },
       bot(play(DRITA, 'BJ'), 'Drita plays the Black Joker.'),
@@ -335,10 +327,8 @@ export const LESSONS: Lesson[] = [
         handNumber: 6,
       }),
     steps: [
-      say(
-        'This hand is nearly over. When you play your last card you’re out, and the order players go out decides the points: ' +
-          '1st gets 3, 2nd gets 2, 3rd gets 1, last gets 0.',
-      ),
+      say('This hand is nearly over. When you play your last card, you’re out.'),
+      say('The order players go out decides the points: 1st gets 3, 2nd gets 2, 3rd gets 1, last gets 0.'),
       { kind: 'you', text: 'Play your pair of 7s to go out first.', solution: play(YOU, '7S 7D'), highlight: true },
       bot(pass(DRITA)),
       bot(pass(ARBEN)),
@@ -350,10 +340,8 @@ export const LESSONS: Lesson[] = [
       bot(play(ARBEN, 'KC')),
       bot(pass(TEUTA)),
       bot(play(ARBEN, '5C'), 'Arben goes out 3rd, which leaves Teuta last.'),
-      say(
-        'Points are added to everyone’s total. The first player to reach 21 wins the game. ' +
-          'If two or more players reach the target in the same hand, the target goes up by 10 (up to 51).',
-      ),
+      say('Points are added to everyone’s total. The first player to reach 21 wins the game.'),
+      say('If two or more players reach the target in the same hand, the target goes up by 10 (up to 51).'),
     ],
   },
   {
@@ -372,10 +360,8 @@ export const LESSONS: Lesson[] = [
         log: [{ kind: 'exchange', from: TEUTA, to: YOU, card: cards('2H')[0] }],
       }),
     steps: [
-      say(
-        'Between hands there’s a card exchange: the player who came last gives their HIGHEST card to the winner, ' +
-          'and the winner gives back any card they choose.',
-      ),
+      say('Between hands there’s a card exchange. The player who came last gives their HIGHEST card to the winner…'),
+      say('…and the winner gives back any card they choose.'),
       say('You won the last hand, so Teuta (who came last) had to hand you her best card — the 2♥.'),
       {
         kind: 'you',
@@ -384,10 +370,8 @@ export const LESSONS: Lesson[] = [
         highlight: true,
         wrong: 'You may give any card in a real game — but giving away your weakest card is the smart move. Give the 3♣.',
       },
-      say(
-        'The player who came last leads the new hand, so Teuta starts. One exception: if the last player holds BOTH jokers, ' +
-          'they show them — there’s no exchange and the winner leads instead.',
-      ),
+      say('The player who came last leads the new hand, so Teuta starts.'),
+      say('One exception: if the last player holds BOTH jokers, they show them. There’s no exchange and the winner leads.'),
       bot(play(TEUTA, '3C'), 'Teuta leads the 3♣ you just gave her.'),
       say('That’s everything! You know all the rules of Murlan. Time to play a real game against the bots.'),
     ],

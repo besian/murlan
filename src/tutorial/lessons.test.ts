@@ -25,6 +25,15 @@ describe('tutorial lessons', () => {
     });
   }
 
+  it('coach texts stay short enough to fit on a phone screen', () => {
+    for (const lesson of LESSONS) {
+      for (const step of lesson.steps) {
+        const text = 'text' in step ? step.text : undefined;
+        if (text) expect(text.length, text).toBeLessThanOrEqual(140);
+      }
+    }
+  });
+
   it('the scoring lesson ends the hand with 3/2/1/0 points', () => {
     const lesson = LESSONS.find((l) => l.id === 'scoring')!;
     let s = lesson.setup();
