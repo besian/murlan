@@ -53,7 +53,7 @@ export function Rules({ onClose }: { onClose: () => void }) {
             </ul>
           )}
         </div>
-        <p className="note">Keys: Enter = play · P = pass · H = hint · Esc = clear</p>
+        <p className="note">Keys: Enter = play · P = pass · Esc = clear</p>
       </div>
     </div>
   );

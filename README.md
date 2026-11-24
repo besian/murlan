@@ -6,12 +6,9 @@ The Albanian shedding card game, in the browser. You can learn it with an intera
 
 ```bash
 npm install
-npm run dev:server   # game server on :8787 (needed for online play)
-npm run dev          # client on http://localhost:5173 (proxies /ws to the server)
+npm run dev          # http://localhost:5173 — the online game server runs inside the dev server
 npm test             # engine tests, 300 simulated bot games, online server integration tests
 ```
-
-Bot mode runs entirely in the browser, so `npm run dev` alone is enough for it.
 
 ## Production
 
@@ -26,7 +23,7 @@ The app is a single Node service, so any host that runs Node with WebSockets wor
 - **Fly.io / any Docker host**: use the included `Dockerfile` (`fly launch`, or `docker build -t murlan . && docker run -p 8787:8787 murlan`).
 
 Rooms live in memory on one server process. If the server restarts, games in progress are lost, and you can't run multiple instances behind a load balancer as-is.
-If the client is hosted separately (e.g. GitHub Pages), build it with `VITE_SERVER_URL=wss://your-server/ws`.
+Online play needs that Node server: a static host on its own (GitHub Pages, Netlify, …) only serves the page, and the game shows "Can't reach the game server". To host the page statically anyway, run the server elsewhere and build the client with `VITE_SERVER_URL=wss://your-server/ws`.
 
 ## Tutorial
 

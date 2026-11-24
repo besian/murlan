@@ -27,12 +27,19 @@ export function OnlineGame({
 
   return (
     <>
-      {online.status !== 'open' && (
+      {online.status !== 'open' && !online.unreachable && (
         <div className="conn-banner" role="status">
           {online.status === 'connecting' ? 'Connecting to server…' : 'Connection lost — reconnecting…'}
         </div>
       )}
-      {!room ? (
+      {online.unreachable && !room ? (
+        <Unreachable online={online} onExit={onExit} />
+      ) : online.unreachable ? (
+        <div className="conn-banner error" role="alert">
+          Can’t reach the game server — retrying…
+        </div>
+      ) : null}
+      {online.unreachable && !room ? null : !room ? (
         <OnlineMenu online={online} initialCode={initialCode} onExit={onExit} name={name} setName={setName} />
       ) : !room.started || !view ? (
         <Lobby online={online} />
@@ -51,6 +58,30 @@ export function OnlineGame({
         />
       )}
     </>
+  );
+}
+
+function Unreachable({ online, onExit }: { online: Online; onExit: () => void }) {
+  return (
+    <div className="start">
+      <div className="start-card">
+        <h2>Can’t reach the game server</h2>
+        <p>
+          Online play needs the Murlan server running alongside this page. It’s still trying in the background — or try
+          again now.
+        </p>
+        <p className="note">
+          Running it yourself? <code>npm run dev</code> or <code>npm start</code> includes the server. Static hosting
+          (like GitHub Pages) can’t run it — use a Node host such as Render, Railway or Fly.io.
+        </p>
+        <button type="button" className="primary big" onClick={online.retry}>
+          Try again
+        </button>
+        <button type="button" className="link" onClick={onExit}>
+          Back
+        </button>
+      </div>
+    </div>
   );
 }
 

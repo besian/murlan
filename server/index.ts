@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { Server, createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -16,6 +16,66 @@ const MIME: Record<string, string> = {
   '.json': 'application/json',
   '.woff2': 'font/woff2',
 };
+
+/**
+ * Serve the game's WebSocket at /ws on an existing HTTP server — the standalone server
+ * below, or Vite's dev/preview server (see vite.config.ts). Other upgrade requests
+ * (such as Vite's hot reload) are left alone.
+ */
+export function attachGameServer(http: Server, manager = new RoomManager(DEFAULT_TIMING)) {
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  http.on('upgrade', (req, socket, head) => {
+    if (new URL(req.url ?? '/', 'http://x').pathname !== '/ws') return;
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  });
+  wss.on('connection', (ws: WebSocket & { alive?: boolean }) => {
+    ws.alive = true;
+    const client: Client = {
+      send(msg: ServerMsg) {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      },
+    };
+    ws.on('pong', () => (ws.alive = true));
+    ws.on('message', (data) => {
+      let msg: unknown;
+      try {
+        msg = JSON.parse(String(data));
+      } catch {
+        return;
+      }
+      try {
+        manager.handle(client, msg);
+      } catch (e) {
+        console.error('error handling message', e);
+        client.send({ t: 'error', message: 'Server error.' });
+      }
+    });
+    ws.on('close', () => manager.disconnect(client));
+  });
+
+  // Drop dead connections so their seats go to autopilot promptly.
+  const heartbeat = setInterval(() => {
+    for (const ws of wss.clients as Set<WebSocket & { alive?: boolean }>) {
+      if (!ws.alive) {
+        ws.terminate();
+        continue;
+      }
+      ws.alive = false;
+      ws.ping();
+    }
+  }, 15_000);
+  heartbeat.unref?.();
+
+  return {
+    manager,
+    close() {
+      clearInterval(heartbeat);
+      for (const room of [...manager.rooms.values()]) manager.delete(room);
+      for (const ws of wss.clients) ws.terminate();
+      wss.close();
+    },
+  };
+}
 
 export interface ServerOptions {
   port: number;
@@ -55,43 +115,7 @@ export function startServer(opts: ServerOptions) {
     createReadStream(file).pipe(res);
   });
 
-  const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 4096 });
-  wss.on('connection', (ws: WebSocket & { alive?: boolean }) => {
-    ws.alive = true;
-    const client: Client = {
-      send(msg: ServerMsg) {
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-      },
-    };
-    ws.on('pong', () => (ws.alive = true));
-    ws.on('message', (data) => {
-      let msg: unknown;
-      try {
-        msg = JSON.parse(String(data));
-      } catch {
-        return;
-      }
-      try {
-        manager.handle(client, msg);
-      } catch (e) {
-        console.error('error handling message', e);
-        client.send({ t: 'error', message: 'Server error.' });
-      }
-    });
-    ws.on('close', () => manager.disconnect(client));
-  });
-
-  // Drop dead connections so their seats go to autopilot promptly.
-  const heartbeat = setInterval(() => {
-    for (const ws of wss.clients as Set<WebSocket & { alive?: boolean }>) {
-      if (!ws.alive) {
-        ws.terminate();
-        continue;
-      }
-      ws.alive = false;
-      ws.ping();
-    }
-  }, 15_000);
+  const game = attachGameServer(http, manager);
 
   const ready = new Promise<number>((res) => {
     http.listen(opts.port, () => {
@@ -105,10 +129,7 @@ export function startServer(opts: ServerOptions) {
     manager,
     close: () =>
       new Promise<void>((res) => {
-        clearInterval(heartbeat);
-        for (const room of [...manager.rooms.values()]) manager.delete(room);
-        for (const ws of wss.clients) ws.terminate();
-        wss.close();
+        game.close();
         http.close(() => res());
       }),
   };

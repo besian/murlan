@@ -338,7 +338,6 @@ input::placeholder { color: var(--ink-faint); }
 }
 .status:empty { background: none; }
 .status.error { color: oklch(0.9 0.08 25); background: oklch(0.45 0.13 25 / 0.55); }
-.status.hint { color: var(--accent-ink); background: var(--accent); }
 .hand { display: flex; justify-content: center; padding-top: 18px; width: 100%; }
 /* Each card sits in a slot that shrinks when the hand is wide, so cards overlap more instead of overflowing. */
 .hand .slot { flex: 0 1 calc(var(--card-w) * 0.6); min-width: 9px; }
@@ -449,14 +448,15 @@ button.pulse { box-shadow: 0 0 0 3px var(--accent), 0 0 22px var(--accent-glow);
 .log-head button { min-height: 32px; padding: 2px 10px; }
 .log-panel ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
 
-/* Floating menu button */
-.menu-fab {
+/* Floating round buttons (menu, scores) */
+.fab {
   position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); z-index: 20;
   width: 44px; height: 44px; min-height: 0; padding: 0; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--shadow-1);
   backdrop-filter: blur(14px) saturate(1.3);
 }
+.scores-fab { right: calc(62px + env(safe-area-inset-right)); display: grid; place-items: center; font-size: 19px; color: var(--accent); }
 .menu-fab span { display: block; width: 16px; height: 2px; border-radius: 2px; background: var(--ink); transition: transform 0.2s; }
 .menu-fab span:nth-child(2) { width: 11px; margin-left: 5px; }
 .menu-backdrop { z-index: 30; align-items: start; justify-items: end; padding: 12px; }
@@ -678,3 +678,36 @@ button.pulse { box-shadow: 0 0 0 3px var(--accent), 0 0 22px var(--accent-glow);
   .menu-modal .menu-item { padding: 6px 12px; min-height: 34px; }
   .modal-backdrop:not(.menu-backdrop) > .modal::before { display: none; }
 }
+
+/* Scores sheet */
+.standings { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.standings li {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 14px;
+  background: oklch(1 0 0 / 0.04); font-variant-numeric: tabular-nums;
+}
+.standings li.me-row { background: oklch(0.84 0.15 78 / 0.12); }
+.standings .rank { width: 18px; text-align: center; color: var(--ink-faint); font-weight: 600; font-size: 13px; }
+.standings .avatar { width: 32px; height: 32px; font-size: 13px; }
+.standings .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.standings .who b { font-weight: 600; }
+.standings .bar { height: 4px; border-radius: 999px; background: oklch(1 0 0 / 0.08); overflow: hidden; }
+.standings .bar i { display: block; height: 100%; border-radius: 999px; background: oklch(0.75 0.14 var(--hue)); transition: width 0.5s var(--ease); }
+.standings .pts { font-weight: 700; font-size: 18px; }
+.standings .pts small { font-size: 12px; font-weight: 500; color: var(--ink-faint); }
+.scores-modal .note { margin: 8px 4px 0; }
+
+/* Keep the floating buttons clear of the table on phones (portrait) and of the coach. */
+.tutorial .table-wrap.has-scores .coach-head, .tutorial .table-wrap.has-scores .coach-progress { margin-right: 100px; }
+@media (min-width: 1300px) {
+  .tutorial .table-wrap.has-scores .coach-head, .tutorial .table-wrap.has-scores .coach-progress { margin-right: 0; }
+}
+@media (max-width: 760px) and (min-height: 521px) {
+  .table-wrap:not(.has-banner) { padding-top: 58px; }
+}
+@media (max-height: 520px) {
+  .fab { width: 36px; height: 36px; top: 6px; right: 6px; }
+  .scores-fab { right: 48px; font-size: 16px; }
+}
+
+.conn-banner.error { background: oklch(0.45 0.14 25); }
+.start-card code { font-size: 0.92em; padding: 1px 6px; border-radius: 6px; background: oklch(1 0 0 / 0.08); color: var(--ink); }

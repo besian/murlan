@@ -224,7 +224,6 @@ function LessonRunner({
         locked={!youStep}
         highlight={highlight}
         highlightPass={highlightPass}
-        onHint={() => setReveal(true)}
         banner={banner}
         hideScores={lesson.id !== 'scoring'}
       />

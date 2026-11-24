@@ -6,7 +6,6 @@ import {
   POINTS_BY_PLACE,
   PlayerView,
   cardLabel,
-  chooseBotAction,
   legalPlays,
   validatePlay,
 } from '../engine';
@@ -14,7 +13,7 @@ import { CardBack, CardView } from './CardView';
 import { describeCombo, ordinal } from './describe';
 import { Pile, PileLayer } from './Pile';
 import { useMenu, useMenuItems } from './menu';
-import { IconBulb, IconX } from './icons';
+import { IconTrophy, IconX } from './icons';
 import { SEAT_HUES as HUES } from './theme';
 
 export interface SeatStatus {
@@ -39,7 +38,6 @@ export interface TableProps {
   locked?: boolean;
   highlight?: string[];
   highlightPass?: boolean;
-  onHint?: () => void;
   banner?: ReactNode;
   hideScores?: boolean;
   nextHandLabel?: string;
@@ -107,9 +105,12 @@ export function Table(props: TableProps) {
   const n = view.players.length;
   const handLog = view.log;
   const [selected, setSelected] = useState<string[]>([]);
-  const [hint, setHint] = useState<string | null>(null);
   const { logOpen: showLog, setLogOpen: setShowLog } = useMenu();
-  useMenuItems('table', [{ id: 'log', label: 'Hand log', onSelect: () => setShowLog(true) }]);
+  const [showScores, setShowScores] = useState(false);
+  useMenuItems('table', [
+    ...(props.hideScores ? [] : [{ id: 'scores', label: 'Scores', onSelect: () => setShowScores(true) }]),
+    { id: 'log', label: 'Hand log', onSelect: () => setShowLog(true) },
+  ]);
   // Close the log when this table goes away.
   useEffect(() => () => setShowLog(false), []); // eslint-disable-line react-hooks/exhaustive-deps
   const tableRef = useRef<HTMLDivElement>(null);
@@ -120,7 +121,6 @@ export function Table(props: TableProps) {
   // Drop selections for cards that left the hand.
   useEffect(() => {
     setSelected((sel) => sel.filter((id) => view.hand.some((c) => c.id === id)));
-    setHint(null);
   }, [handKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const name = (id: number) => (id === me ? 'You' : view.players[id].name);
@@ -164,7 +164,6 @@ export function Table(props: TableProps) {
   const canPlay = selectionCheck !== null && typeof selectionCheck !== 'string';
 
   const toggle = (card: Card) => {
-    setHint(null);
     clearError();
     if (exchanging) {
       setSelected((s) => (s[0] === card.id ? [] : [card.id]));
@@ -183,18 +182,6 @@ export function Table(props: TableProps) {
     dispatch({ type: 'pass', player: me });
     setSelected([]);
   };
-  const doHint = () => {
-    if (!(playing || exchanging) || !myTurn) return;
-    if (props.onHint) return props.onHint();
-    const a = chooseBotAction(view, { noise: 0 });
-    if (a.type === 'play') {
-      setSelected(a.cardIds);
-      setHint(null);
-    } else if (a.type === 'pass') {
-      setSelected([]);
-      setHint('Hint: passing looks best here.');
-    }
-  };
   const doGive = () => {
     if (!exchanging || selected.length !== 1) return;
     dispatch({ type: 'exchangeReturn', player: me, cardId: selected[0] });
@@ -208,7 +195,6 @@ export function Table(props: TableProps) {
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON') return;
       if (e.key === 'Enter') (exchanging ? doGive : doPlay)();
       else if (e.key === 'p' || e.key === 'P') doPass();
-      else if (e.key === 'h' || e.key === 'H') doHint();
       else if (e.key === 'Escape') setSelected([]);
     };
     window.addEventListener('keydown', onKey);
@@ -240,7 +226,7 @@ export function Table(props: TableProps) {
   const showTimer = myTurn && secondsLeft !== null && secondsLeft <= 20;
 
   const feedback =
-    error ?? (myTurn ? hint : null) ?? (selected.length && typeof selectionCheck === 'string' && !exchanging ? selectionCheck : null);
+    error ?? (selected.length && typeof selectionCheck === 'string' && !exchanging ? selectionCheck : null);
 
   // Exchange notices for the current hand that involve me.
   const exchangeNotes = handLog
@@ -261,20 +247,24 @@ export function Table(props: TableProps) {
   const others = view.players.filter((p) => p.id !== me);
 
   return (
-    <main className="table-wrap" style={{ '--me-hue': HUES[me] } as React.CSSProperties}>
+    <main
+      className={'table-wrap' + (props.banner ? ' has-banner' : '') + (props.hideScores ? '' : ' has-scores')}
+      style={{ '--me-hue': HUES[me] } as React.CSSProperties}
+    >
       {props.banner}
       {!props.hideScores && (
-        <div className="scorebar">
-          <div className="scoreboard">
-            <span className="target">First to {view.target}</span>
-            {view.players.map((p) => (
-              <span key={p.id} className="score">
-                {name(p.id)} <b>{p.score}</b>
-              </span>
-            ))}
-          </div>
-        </div>
+        <button
+          type="button"
+          className="fab scores-fab"
+          aria-label="Scores"
+          aria-haspopup="dialog"
+          aria-expanded={showScores}
+          onClick={() => setShowScores(true)}
+        >
+          <IconTrophy />
+        </button>
       )}
+      {showScores && <Scores view={view} name={name} onClose={() => setShowScores(false)} />}
       {showLog && <GameLog log={handLog} name={name} onClose={() => setShowLog(false)} />}
       <div className="table" ref={tableRef}>
         {others.map((p) => {
@@ -350,7 +340,7 @@ export function Table(props: TableProps) {
 
         <section className={`me ${myTurn ? 'active' : ''}`}>
           <div
-            className={'status' + (feedback ? (feedback === hint && !error ? ' hint' : ' error') : '')}
+            className={'status' + (feedback ? ' error' : '')}
             role="status"
             aria-live="polite"
           >
@@ -389,10 +379,6 @@ export function Table(props: TableProps) {
                 >
                   Pass
                 </button>
-                <button type="button" className="icon-btn" disabled={!(playing && myTurn)} onClick={doHint}>
-                  <IconBulb />
-                  <span>{props.onHint ? 'Show me' : 'Hint'}</span>
-                </button>
                 <button
                   type="button"
                   className="icon-btn ghost clear-btn"
@@ -413,6 +399,51 @@ export function Table(props: TableProps) {
         <HandResult {...props} name={name} secondsLeft={secondsLeft} />
       )}
     </main>
+  );
+}
+
+function Scores({ view, name, onClose }: { view: PlayerView; name: (id: number) => string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const standings = [...view.players].sort((a, b) => b.score - a.score || a.id - b.id);
+  return (
+    <div className="modal-backdrop menu-backdrop" onClick={onClose}>
+      <div className="modal menu-modal scores-modal" role="dialog" aria-modal aria-label="Scores" onClick={(e) => e.stopPropagation()}>
+        <div className="menu-head">
+          <div>
+            <h2>Scores</h2>
+            <div className="menu-sub">
+              Hand {view.handNumber} · first to {view.target} wins
+            </div>
+          </div>
+          <button type="button" className="ghost close" onClick={onClose} aria-label="Close scores">
+            ✕
+          </button>
+        </div>
+        <ol className="standings">
+          {standings.map((p, i) => (
+            <li key={p.id} className={p.id === view.me ? 'me-row' : ''} style={{ '--hue': HUES[p.id] } as React.CSSProperties}>
+              <span className="rank">{i + 1}</span>
+              <span className="avatar">{p.name[0]}</span>
+              <span className="who">
+                <b>{name(p.id)}</b>
+                <span className="bar" aria-hidden>
+                  <i style={{ width: `${Math.min(100, (p.score / view.target) * 100)}%` }} />
+                </span>
+              </span>
+              <span className="pts">
+                {p.score}
+                <small> pts</small>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p className="note">1st in a hand: 3 pts · 2nd: 2 · 3rd: 1 · last: 0</p>
+      </div>
+    </div>
   );
 }
 

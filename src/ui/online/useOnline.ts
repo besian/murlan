@@ -53,6 +53,9 @@ export function useOnline(name: string) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [deadline, setDeadline] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Failed connection attempts since the last successful one. */
+  const [failures, setFailures] = useState(0);
+  const retryNow = useRef<() => void>(() => {});
   const ws = useRef<WebSocket | null>(null);
   const queue = useRef<ClientMsg[]>([]);
   const nameRef = useRef(name);
@@ -74,6 +77,7 @@ export function useOnline(name: string) {
       ws.current = sock;
       sock.onopen = () => {
         retry = 0;
+        setFailures(0);
         setStatus('open');
         // Take our seat back after a refresh or a dropped connection.
         const session = loadSession();
@@ -117,11 +121,22 @@ export function useOnline(name: string) {
         }
       };
       sock.onclose = () => {
-        if (disposed) return;
+        if (disposed || ws.current !== sock) return;
         setStatus('reconnecting');
+        setFailures((f) => f + 1);
         retry++;
         retryTimer = window.setTimeout(connect, Math.min(8000, 500 * 2 ** retry));
       };
+    };
+    retryNow.current = () => {
+      window.clearTimeout(retryTimer);
+      retry = 0;
+      setFailures(0);
+      const old = ws.current;
+      ws.current = null;
+      old?.close();
+      setStatus('connecting');
+      connect();
     };
     connect();
     return () => {
@@ -133,6 +148,9 @@ export function useOnline(name: string) {
 
   return {
     status,
+    /** The server has not answered several attempts in a row. */
+    unreachable: status !== 'open' && failures >= 2,
+    retry: () => retryNow.current(),
     room,
     view,
     deadline,

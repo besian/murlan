@@ -63,7 +63,7 @@ export function useMenuItems(key: string, items: MenuItem[] | null) {
 
 export function MenuButton({ onClick, open }: { onClick: () => void; open: boolean }) {
   return (
-    <button type="button" className="menu-fab" aria-label="Menu" aria-haspopup="dialog" aria-expanded={open} onClick={onClick}>
+    <button type="button" className="fab menu-fab" aria-label="Menu" aria-haspopup="dialog" aria-expanded={open} onClick={onClick}>
       <span />
       <span />
       <span />
